@@ -1,0 +1,137 @@
+
+x-airflow-common: &airflow-common
+  image: my-airflow-with-dbt
+  env_file:
+    - .env
+  environment:
+    # DB Config
+    POSTGRES_USER: ${DB_USER:-postgres}
+    POSTGRES_PASSWORD: ${DB_PASSWORD:-2409}
+    POSTGRES_DB: ${DB_NAME:-ecommerce_analytics}
+
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:-2409}@postgres:5432/${DB_NAME:-ecommerce_analytics}"
+
+    # Rate limiting backend using Redis
+    AIRFLOW__WEBSERVER__RATELIMIT_STORAGE_URI: redis://redis:6379
+
+    # Other Airflow settings
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__FERNET_KEY: "5A7hJE8D2HsIru1QvYTELuB7AL9O1qjd3taU9Gtijb4="
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+    AIRFLOW__WEBSERVER__SECRET_KEY: "your-secret-key-here"
+    AIRFLOW__CORE__ENABLE_XCOM_PICKLING: "true"
+
+    # DBT Binary Path
+    DBT_BINARY_PATH: /home/airflow/.local/bin/dbt
+
+  networks:
+    - analytics_network
+  restart: unless-stopped
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./data:/opt/airflow/data
+    - ./scripts:/opt/airflow/scripts
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./.env:/opt/airflow/.env
+    - ./dbt-profiles:/dbt-env
+    - ./ecommerce_dbt:/usr/app/dbt  # <-- Mounting dbt project into all Airflow containers
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-2409}
+      POSTGRES_DB: ${DB_NAME:-ecommerce_analytics}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - analytics_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-ecommerce_analytics}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - analytics_network
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -ex &&
+        airflow db init &&
+        airflow connections create-default-connections &&
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"  # Important: don't restart after success
+    networks:
+      - analytics_network
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    ports:
+      - "8080:8080"
+    command: webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  dbt:
+    build:
+      context: .
+    container_name: dbt
+    volumes:
+      - ./ecommerce_dbt:/usr/app/dbt
+      - ./data:/usr/app/raw_data
+      - ./dbt-profiles:/root/.dbt  # Optional: reuse same profiles
+    working_dir: /usr/app/dbt
+    entrypoint: ["tail", "-f", "/dev/null"]  # Keep container running
+    networks:
+      - analytics_network
+
+volumes:
+  postgres_data:
+
+networks:
+  analytics_network:
+    driver: bridge
