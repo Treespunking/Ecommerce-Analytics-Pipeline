@@ -1,0 +1,13 @@
+ecommerce_dbt:
+  outputs:
+    dev:
+      dbname: ecommerce_analytics
+      host: postgres
+      pass: '2409'
+      port: 5432
+      schema: dbt_dev
+      threads: 4
+      type: postgres
+      user: postgres
+  target: dev
+
