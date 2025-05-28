@@ -1,0 +1,51 @@
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models.
+name: 'ecommerce_dbt'
+version: '1.0.0'
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'ecommerce_dbt'
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Prevent dbt from fully qualifying names with database/schema
+quoting:
+  database: false
+  schema: false
+  identifier: false
+
+# Global config for all models
+config-version: 2
+
+on-run-start:
+  - "SET LOCAL statement_timeout = '300s';"  # Optional: Tune query timeout
+
+models:
+  ecommerce_dbt:
+    +materialized: table
+    +temporary: false  # GLOBAL DEFAULT: DO NOT CREATE TEMP OBJECTS
+
+    # Staging models - usually views to keep raw data untouched
+    staging:
+      +materialized: table
+      +on_table_exists: replace
+
+    # Marts or intermediate models - typically materialized as tables
+    marts:
+      +materialized: table
+      +on_table_exists: replace
+
+    # Example directory (if used) - already configured as view by default
+    example:
+      +materialized: table

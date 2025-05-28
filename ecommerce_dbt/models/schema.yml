@@ -1,0 +1,106 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "Customer dimension table"
+    tags: ["dimension", "customer"]
+    meta:
+      owner: analytics_team
+      purpose: "Customer segmentation and analysis"
+    columns:
+      - name: customer_id
+        description: "Unique ID for the customer"
+        tests:
+          - unique
+          - not_null
+        tags: ["id", "customer"]
+
+  - name: dim_products
+    description: "Product dimension table with translated categories"
+    tags: ["dimension", "product"]
+    meta:
+      owner: product_team
+      purpose: "Product reporting and classification"
+    columns:
+      - name: product_id
+        description: "Unique ID for the product"
+        tests:
+          - unique
+          - not_null
+        tags: ["id", "product"]
+
+  - name: dim_sellers
+    description: "Seller dimension table"
+    tags: ["dimension", "seller"]
+    meta:
+      owner: sales_team
+      purpose: "Seller performance tracking"
+    columns:
+      - name: seller_id
+        description: "Unique ID for the seller"
+        tests:
+          - unique
+          - not_null
+        tags: ["id", "seller"]
+
+  - name: dim_reviews
+    description: "Order reviews dimension table"
+    tags: ["dimension", "review"]
+    meta:
+      owner: marketing_team
+      purpose: "Customer feedback and sentiment analysis"
+    columns:
+      - name: review_id
+        description: "Unique ID for the review"
+        tests:
+          - unique
+          - not_null
+        tags: ["id", "review"]
+
+  - name: fact_sales
+    description: "Fact table containing sales transaction details"
+    tags: ["fact", "sales"]
+    meta:
+      owner: finance_team
+      purpose: "Sales reporting and revenue analysis"
+    columns:
+      - name: order_id
+        description: "Unique identifier for an order"
+        tests:
+          - not_null
+        tags: ["id", "order"]
+      - name: product_id
+        description: "Foreign key to products"
+        tests:
+          - relationships:
+              to: ref('dim_products')
+              field: product_id
+        tags: ["id", "product"]
+      - name: customer_id
+        description: "Foreign key to customers"
+        tests:
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_id
+        tags: ["id", "customer"]
+      - name: seller_id
+        description: "Foreign key to sellers"
+        tests:
+          - relationships:
+              to: ref('dim_sellers')
+              field: seller_id
+        tags: ["id", "seller"]
+
+  - name: dim_date
+    description: "Date dimension table for time analysis"
+    tags: ["dimension", "date"]
+    meta:
+      owner: analytics_team
+      purpose: "Time-based aggregation and reporting"
+    columns:
+      - name: date_key
+        description: "Date as a primary key"
+        tests:
+          - unique
+          - not_null
+        tags: ["date", "primary_key"]
