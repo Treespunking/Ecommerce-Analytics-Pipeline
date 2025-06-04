@@ -20,7 +20,7 @@ This project builds a robust end-to-end Extract, Transform, Load (ETL) pipeline 
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 The project is organized into several directories, each serving a specific purpose. Below is a detailed breakdown of the project structure:
 
@@ -91,13 +91,12 @@ This is the main directory for the dbt project, containing all the dbt-related f
 ### **6. Other Files**
 - **`.user.yml`**: User-specific configuration file for dbt.
 - **`first10rows_from_each_table.py`**: Python script for inspecting the first 10 rows of each table.
-- **`jdtb`**: Likely a placeholder or typo; ensure this is correctly named if it serves a specific purpose.
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+This project is licensed under the MIT License.
 
 ---
 
